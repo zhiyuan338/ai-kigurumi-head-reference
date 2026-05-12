@@ -163,15 +163,11 @@
             </label>
             <label>
               <span data-i18n="uploadRefs">Upload reference images</span>
-              <input class="file-input" type="file" accept="image/*" multiple />
             </label>
+            <div class="reference-guidance"></div>
             <label class="carry-row">
               <input class="carry-prev" type="checkbox" checked />
               <span data-i18n="includePrev">Include selected image from previous stage</span>
-            </label>
-            <label class="carry-row">
-              <input class="carry-current" type="checkbox" />
-              <span data-i18n="includeCurrent">Include selected image from this stage for refinement</span>
             </label>
             <label>
               <span data-i18n="details">Detailed modification notes</span>
@@ -180,6 +176,14 @@
             <label>
               <span data-i18n="prompt">Prompt</span>
               <textarea class="prompt-input" rows="12"></textarea>
+            </label>
+            <label class="carry-row current-refine-row">
+              <input class="carry-current" type="checkbox" />
+              <span data-i18n="includeCurrent">Include selected image from this stage for refinement</span>
+            </label>
+            <label class="carry-row refinement-refs-row">
+              <input class="use-refinement-refs" type="checkbox" />
+              <span data-i18n="useRefinementRefs">Use uploaded reference images during refinement</span>
             </label>
             <div class="actions">
               <button class="primary-button run-stage" type="button" data-i18n="runStage">Run stage</button>

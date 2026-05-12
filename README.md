@@ -66,12 +66,12 @@ ai-kigurumi-head-reference/
 
 本仓库包含一个无需构建步骤的静态前端：
 
-- `index.html`
-- `styles.css`
-- `app.js`
-- `assets/workflow-reference.jpeg`
+- `frontend/index.html`
+- `frontend/styles.css`
+- `frontend/app.js`
+- `frontend/assets/workflow-reference.jpeg`
 
-直接打开 `index.html`，或在 GitHub 仓库的 **Settings → Pages** 中选择从当前分支发布即可使用。
+直接打开 `frontend/index.html`，或在 GitHub 仓库的 **Settings → Pages** 中选择从当前分支的 `frontend/` 目录发布即可使用。
 
 API Base URL 和 API Key 只会保存在用户浏览器本地，不会写入仓库。执行生成时，Key 会发送给用户配置的图像或文本 API 端点。若 API 服务不允许浏览器跨域请求，请在页面中填写一个兼容 OpenAI API 的、允许 CORS 的代理 Base URL。
 

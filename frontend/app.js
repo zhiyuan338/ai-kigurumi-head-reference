@@ -20,8 +20,15 @@ const dictionaries = {
     privacyNotice: "API Base URL 和 Key 只保存在当前浏览器中，不会写入 GitHub 仓库，也不会公开。执行阶段时，Key 只会发送给你配置的 API 端点。",
     promptPreset: "Prompt 模板",
     uploadRefs: "上传参考图",
+    uploadSlot: "上传",
+    replaceSlot: "更换",
+    deleteSlot: "删除",
+    otherRefs: "其他参考图",
+    otherRefsHelp: "上传补充材料，避免过多重复或分工不清的图片。",
+    previousCarryNote: "已使用上一阶段选中的图片作为主参考，因此该槽位已禁用。",
     includePrev: "包含上一阶段选中的图片",
-    includeCurrent: "包含本阶段选中图片继续微调",
+    includeCurrent: "使用本阶段选中图片继续微调（生成图片后可用，将禁用 Prompt）",
+    useRefinementRefs: "微调时同时使用上传的参考图",
     details: "详细修改要求",
     detailsPlaceholder: "例如：只修正表情，保持发型结构和四视图排版不变。",
     prompt: "Prompt",
@@ -32,6 +39,7 @@ const dictionaries = {
     download: "下载",
     running: "正在请求图像 API...",
     missingKey: "请先填写图像 API Key。",
+    missingPrompt: "请先填写要发送的 Prompt。",
     noImage: "还没有结果。上传参考图并执行本阶段。",
     done: "完成。可以选中一张图片进入下一阶段。",
     failed: "执行失败：",
@@ -72,8 +80,15 @@ const dictionaries = {
     privacyNotice: "Your API base URL and keys are stored only in this browser. They are never written into this GitHub repository or made public. When you run a stage, the key is sent only to the API endpoint you configured.",
     promptPreset: "Prompt preset",
     uploadRefs: "Upload reference images",
+    uploadSlot: "Upload",
+    replaceSlot: "Replace",
+    deleteSlot: "Delete",
+    otherRefs: "Other reference images",
+    otherRefsHelp: "Upload supporting references, while avoiding too many duplicate or unclear-role images.",
+    previousCarryNote: "The selected previous-stage image is already used as the main reference, so this slot is disabled.",
     includePrev: "Include selected image from previous stage",
-    includeCurrent: "Include selected image from this stage for refinement",
+    includeCurrent: "Use selected image from this stage for refinement (available after generation; disables Prompt)",
+    useRefinementRefs: "Use uploaded reference images during refinement",
     details: "Detailed modification notes",
     detailsPlaceholder: "Example: only fix the expression; keep hairstyle structure and four-view layout unchanged.",
     prompt: "Prompt",
@@ -84,6 +99,7 @@ const dictionaries = {
     download: "Download",
     running: "Requesting the image API...",
     missingKey: "Fill in the image API key first.",
+    missingPrompt: "Fill in the prompt that should be sent first.",
     noImage: "No results yet. Upload references and run this stage.",
     done: "Done. Select one image to carry into the next stage.",
     failed: "Failed: ",
@@ -104,6 +120,63 @@ const dictionaries = {
     helperMissing: "Fill in a text API key, or reuse the image API key above.",
     helperRunning: "Generating revised prompt...",
     helperDone: "Generated."
+  }
+};
+
+const referenceGuidance = {
+  1: {
+    min: 4,
+    max: 7,
+    slots: [
+      {
+        title: { zh: "结构参考图", en: "Structure references" },
+        help: { zh: "正面、背面、侧面或45度，用于发型和头部结构。", en: "Front, back, side, or 45-degree views for hairstyle and head structure." }
+      },
+      {
+        title: { zh: "表情参考图", en: "Expression reference" },
+        help: { zh: "用于眉毛、眼神、眼睑和嘴巴情绪。", en: "Used for eyebrows, gaze, eyelids, mouth, and emotion." }
+      },
+      {
+        title: { zh: "官方角色图", en: "Official character art" },
+        help: { zh: "用于气质、配色、虹膜颜色和角色识别感。", en: "Used for temperament, color palette, iris color, and identity." }
+      }
+    ]
+  },
+  2: {
+    min: 4,
+    max: 6,
+    slots: [
+      {
+        title: { zh: "Step 1 最终四视图", en: "Final Step 1 turnaround" },
+        help: { zh: "作为角色身份、发型和四视图关系的主参考。", en: "Main reference for identity, hairstyle, and view relationships." }
+      },
+      {
+        title: { zh: "目标表情参考", en: "Target expression" },
+        help: { zh: "1-2 张，用于固定最终头壳表情。", en: "1-2 images for final shell expression." }
+      },
+      {
+        title: { zh: "Kigurumi 案例图", en: "Kigurumi examples" },
+        help: { zh: "2-3 张，只参考头壳比例、眼眶和假发处理。", en: "2-3 images only for shell proportions, sockets, and wig handling." }
+      }
+    ]
+  },
+  3: {
+    min: 2,
+    max: 5,
+    slots: [
+      {
+        title: { zh: "Step 2 最终头壳图", en: "Final Step 2 shell design" },
+        help: { zh: "作为最终结构、发型、脸型和表情依据。", en: "Main basis for final structure, hairstyle, face shape, and expression." }
+      },
+      {
+        title: { zh: "商品照案例图", en: "Product-photo examples" },
+        help: { zh: "1-3 张，用于白底拍摄质量、材质和展示方式。", en: "1-3 images for white-background photo quality, material, and display." }
+      },
+      {
+        title: { zh: "表情参考图（可选）", en: "Expression reference (optional)" },
+        help: { zh: "用于确认最终眉毛、眼神和嘴巴。", en: "Used to confirm final eyebrows, gaze, and mouth." }
+      }
+    ]
   }
 };
 
@@ -308,6 +381,7 @@ function renderStages() {
     presetSelect.addEventListener("change", setPrompt);
     setPrompt();
 
+    renderReferenceGuidance(stage, node);
     $(".run-stage", node).addEventListener("click", () => runStage(stage, node));
     $(".copy-stage", node).addEventListener("click", async () => {
       await navigator.clipboard.writeText(buildPrompt(node));
@@ -319,6 +393,7 @@ function renderStages() {
     }
 
     bindExclusiveCarryOptions(node);
+    updateDetailVisibility(node);
 
     localizeNode(node);
     $(".stage-status", node).textContent = t("noImage");
@@ -327,15 +402,222 @@ function renderStages() {
   }
 }
 
+function renderReferenceGuidance(stage, node) {
+  const guidance = referenceGuidance[stage.id];
+  const host = $(".reference-guidance", node);
+  host.innerHTML = "";
+
+  const slotGrid = document.createElement("div");
+  slotGrid.className = "slot-grid";
+  guidance.slots.forEach((slot, index) => {
+    slotGrid.appendChild(createUploadSlot(slot.title[state.lang], slot.help[state.lang], stage, node, false, stage.id > 1 && index === 0));
+  });
+
+  const otherSlot = createUploadSlot(t("otherRefs"), t("otherRefsHelp"), stage, node, true, false);
+
+  const warning = document.createElement("p");
+  warning.className = "reference-warning";
+  host.append(slotGrid, otherSlot, warning);
+  updatePreviousSlotState(node);
+  updateReferenceWarning(stage, node);
+}
+
+function createUploadSlot(titleText, helpText, stage, node, isWide, isPreviousCarrySlot) {
+  const card = document.createElement("div");
+  card.className = isWide ? "reference-slot upload-slot upload-slot-wide" : "reference-slot upload-slot";
+  if (isPreviousCarrySlot) {
+    card.dataset.previousCarrySlot = "true";
+  }
+
+  const title = document.createElement("strong");
+  title.textContent = titleText;
+  const help = document.createElement("span");
+  help.textContent = helpText;
+
+  const inputId = `stage-${stage.id}-upload-${Math.random().toString(36).slice(2)}`;
+  const input = document.createElement("input");
+  input.id = inputId;
+  input.className = "slot-file-input";
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+
+  const actions = document.createElement("div");
+  actions.className = "slot-actions";
+
+  const button = document.createElement("button");
+  button.className = "upload-button";
+  button.type = "button";
+  button.textContent = t("uploadSlot");
+
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "delete-upload-button";
+  deleteButton.type = "button";
+  deleteButton.textContent = t("deleteSlot");
+  deleteButton.hidden = true;
+
+  const preview = document.createElement("div");
+  preview.className = "slot-preview";
+  preview.setAttribute("aria-live", "polite");
+
+  const carryNote = document.createElement("p");
+  carryNote.className = "previous-carry-note";
+  carryNote.textContent = t("previousCarryNote");
+
+  button.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (!input.files.length) return;
+    card._files = [...input.files];
+    renderSlotPreview(card);
+    updateReferenceWarning(stage, node);
+  });
+  deleteButton.addEventListener("click", () => {
+    clearUploadSlot(card);
+    updateReferenceWarning(stage, node);
+  });
+
+  actions.append(button, deleteButton);
+  card.append(title, help, input, actions, preview, carryNote);
+  return card;
+}
+
+function updateReferenceWarning(stage, node) {
+  const guidance = referenceGuidance[stage.id];
+  const count = getStageReferenceFiles(node).length;
+  const warning = $(".reference-warning", node);
+  const ok = count >= guidance.min;
+  warning.classList.toggle("ok", ok);
+  if (state.lang === "zh") {
+    warning.textContent = ok
+      ? `已选择 ${count} 张参考图。建议范围：${guidance.min}-${guidance.max} 张。`
+      : `已选择 ${count} 张参考图。建议至少 ${guidance.min} 张，图片太少可能会降低结构、表情或风格稳定性。`;
+  } else {
+    warning.textContent = ok
+      ? `${count} reference image(s) selected. Recommended range: ${guidance.min}-${guidance.max}.`
+      : `${count} reference image(s) selected. Use at least ${guidance.min}; too few images may compromise structure, expression, or style stability.`;
+  }
+}
+
+function renderSlotPreview(slot) {
+  const preview = $(".slot-preview", slot);
+  const button = $(".upload-button", slot);
+  const deleteButton = $(".delete-upload-button", slot);
+  const previousUrls = preview.dataset.objectUrls ? JSON.parse(preview.dataset.objectUrls) : [];
+  previousUrls.forEach((url) => URL.revokeObjectURL(url));
+
+  preview.innerHTML = "";
+  const urls = [];
+  (slot._files || []).forEach((file) => {
+    const url = URL.createObjectURL(file);
+    urls.push(url);
+
+    const item = document.createElement("figure");
+    item.className = "upload-thumb";
+
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = file.name;
+
+    const caption = document.createElement("span");
+    caption.title = file.name;
+    caption.textContent = file.name;
+
+    item.append(image, caption);
+    preview.appendChild(item);
+  });
+  preview.dataset.objectUrls = JSON.stringify(urls);
+  button.textContent = slot._files?.length ? t("replaceSlot") : t("uploadSlot");
+  deleteButton.hidden = !slot._files?.length;
+}
+
+function clearUploadSlot(slot) {
+  const input = $(".slot-file-input", slot);
+  const preview = $(".slot-preview", slot);
+  const button = $(".upload-button", slot);
+  const deleteButton = $(".delete-upload-button", slot);
+  const previousUrls = preview.dataset.objectUrls ? JSON.parse(preview.dataset.objectUrls) : [];
+  previousUrls.forEach((url) => URL.revokeObjectURL(url));
+  input.value = "";
+  slot._files = [];
+  preview.innerHTML = "";
+  preview.dataset.objectUrls = "[]";
+  button.textContent = t("uploadSlot");
+  deleteButton.hidden = true;
+}
+
+function getStageReferenceFiles(node) {
+  return $$(".upload-slot", node)
+    .filter((slot) => !$(".slot-file-input", slot).disabled)
+    .flatMap((slot) => slot._files || []);
+}
+
 function bindExclusiveCarryOptions(node) {
   const carryPrev = $(".carry-prev", node);
   const carryCurrent = $(".carry-current", node);
   carryPrev.addEventListener("change", () => {
     if (carryPrev.checked) carryCurrent.checked = false;
+    updateDetailVisibility(node);
+    updatePreviousSlotState(node);
+    updateReferenceSlotState(node);
   });
   carryCurrent.addEventListener("change", () => {
     if (carryCurrent.checked) carryPrev.checked = false;
+    updateDetailVisibility(node);
+    updatePreviousSlotState(node);
+    updateReferenceSlotState(node);
   });
+  $(".use-refinement-refs", node).addEventListener("change", () => {
+    updateReferenceSlotState(node);
+  });
+}
+
+function updatePreviousSlotState(node) {
+  if ($(".carry-current", node).checked) return;
+  const carryPrev = $(".carry-prev", node);
+  const slot = $('[data-previous-carry-slot="true"]', node);
+  if (!carryPrev || !slot) return;
+
+  const disabled = carryPrev.checked;
+  slot.classList.toggle("disabled", disabled);
+  $$(".slot-file-input", slot).forEach((input) => {
+    input.disabled = disabled;
+  });
+  $$(".upload-button", slot).forEach((button) => {
+    button.setAttribute("aria-disabled", String(disabled));
+  });
+}
+
+function updateReferenceSlotState(node) {
+  const carryCurrent = $(".carry-current", node);
+  const useRefinementRefs = $(".use-refinement-refs", node).checked;
+  const disabled = carryCurrent.checked && !useRefinementRefs;
+  $$(".upload-slot", node).forEach((slot) => {
+    slot.classList.toggle("disabled", disabled);
+    $$(".slot-file-input", slot).forEach((input) => {
+      input.disabled = disabled;
+    });
+    $$(".upload-button, .delete-upload-button", slot).forEach((button) => {
+      button.setAttribute("aria-disabled", String(disabled));
+    });
+  });
+  if (!disabled) {
+    updatePreviousSlotState(node);
+  }
+}
+
+function updateDetailVisibility(node) {
+  const detailLabel = $(".detail-input", node).closest("label");
+  const refinementRefsLabel = $(".use-refinement-refs", node).closest("label");
+  const promptInput = $(".prompt-input", node);
+  const carryCurrent = $(".carry-current", node);
+  const hasOutputs = Boolean(state.results[node.dataset.stageId]?.length);
+  carryCurrent.disabled = !hasOutputs;
+  if (!hasOutputs) carryCurrent.checked = false;
+  const isRefinement = carryCurrent.checked;
+  detailLabel.style.display = isRefinement ? "grid" : "none";
+  refinementRefsLabel.style.display = isRefinement ? "flex" : "none";
+  promptInput.disabled = isRefinement;
+  updateReferenceSlotState(node);
 }
 
 function localizeNode(root) {
@@ -378,7 +660,8 @@ function t(key) {
 function buildPrompt(stageNode) {
   const prompt = $(".prompt-input", stageNode).value.trim();
   const detail = $(".detail-input", stageNode).value.trim();
-  return detail ? `${prompt}\n\nAdditional detailed modification request:\n${detail}` : prompt;
+  const isRefinement = $(".carry-current", stageNode).checked;
+  return isRefinement ? detail : prompt;
 }
 
 async function runStage(stage, node) {
@@ -393,7 +676,13 @@ async function runStage(stage, node) {
   status.textContent = t("running");
   try {
     const prompt = buildPrompt(node);
-    const files = [...$(".file-input", node).files];
+    if (!prompt) {
+      status.textContent = t("missingPrompt");
+      return;
+    }
+    const isRefinement = $(".carry-current", node).checked;
+    const useRefinementRefs = $(".use-refinement-refs", node).checked;
+    const files = isRefinement && !useRefinementRefs ? [] : getStageReferenceFiles(node);
     const carryPrev = $(".carry-prev", node)?.checked && stage.id > 1 ? state.selected[stage.id - 1] : null;
     const carryCurrent = $(".carry-current", node).checked ? state.selected[stage.id] : null;
     const references = [...files];
@@ -478,6 +767,8 @@ async function parseImageResponse(response) {
 function renderResults(stageId) {
   const stageNode = $(`[data-stage-id="${stageId}"]`);
   if (!stageNode) return;
+  updateDetailVisibility(stageNode);
+  updateReferenceSlotState(stageNode);
   const grid = $(".result-grid", stageNode);
   grid.innerHTML = "";
   const results = state.results[stageId];
