@@ -54,7 +54,11 @@
           </label>
           <label>
             <span data-i18n="imageModel">Image model</span>
-            <input id="imageModel" type="text" value="gpt-image-2" />
+            <div class="model-combobox">
+              <input id="imageModel" type="text" value="gpt-image-2" autocomplete="off" />
+              <button id="imageModelToggle" class="model-menu-toggle" type="button" aria-label="Show image model presets" aria-expanded="false">▾</button>
+              <div id="imageModelMenu" class="model-menu" hidden></div>
+            </div>
           </label>
           <label>
             <span data-i18n="size">Output size</span>
@@ -187,17 +191,28 @@
             </label>
             <div class="actions">
               <button class="primary-button run-stage" type="button" data-i18n="runStage">Run stage</button>
+              <span class="run-help-tip" data-notice-text="runStageHelp"></span>
               <button class="ghost-button copy-stage" type="button" data-i18n="copyPrompt">Copy prompt</button>
             </div>
             <p class="stage-status"></p>
           </section>
 
           <section class="stage-results">
+            <h3 class="stage-results-title" data-i18n="resultsTitle">Generated results</h3>
+            <div class="results-loading" hidden></div>
             <div class="result-grid"></div>
           </section>
         </div>
       </article>
     </template>
+
+    <div class="first-visit-modal" id="firstVisitModal" hidden role="dialog" aria-modal="true" aria-labelledby="firstVisitTitle">
+      <div class="first-visit-dialog">
+        <h2 id="firstVisitTitle" data-i18n="firstVisitTitle">Before generation</h2>
+        <p data-notice-text="runStageHelp"></p>
+        <button class="primary-button" id="firstVisitDismiss" type="button" data-i18n="understood">Understood</button>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>

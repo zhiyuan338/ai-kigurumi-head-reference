@@ -1,4 +1,15 @@
 const STORAGE_KEY = "kigurumi-head-studio-v1";
+const FIRST_VISIT_KEY = "kigurumi-head-studio-first-visit-dismissed";
+
+const imageModelPresets = [
+  "gpt-image-2",
+  "gpt-image-1",
+  "nano-banana",
+  "gemini-2.5-flash-image",
+  "gemini-2.5-flash-image-preview",
+  "gemini-3.1-flash-image-preview",
+  "gemini-3-pro-image-preview"
+];
 
 const dictionaries = {
   zh: {
@@ -21,8 +32,9 @@ const dictionaries = {
     promptPreset: "Prompt 模板",
     uploadRefs: "上传参考图",
     uploadSlot: "上传",
-    replaceSlot: "更换",
-    deleteSlot: "删除",
+    uploadHelp: "可一次选择多张图片，也可拖拽图片到对应槽位。",
+    replaceSlot: "继续上传",
+    deleteSlot: "全部删除",
     otherRefs: "其他参考图",
     otherRefsHelp: "上传补充材料，避免过多重复或分工不清的图片。",
     previousCarryNote: "已使用上一阶段选中的图片作为主参考，因此该槽位已禁用。",
@@ -33,11 +45,20 @@ const dictionaries = {
     detailsPlaceholder: "例如：只修正表情，保持发型结构和四视图排版不变。",
     prompt: "Prompt",
     runStage: "执行阶段",
+    noticePrefix: "请注意：",
+    runStageHelp: "在执行某阶段时，如果图像生成 API 已经开始处理，这次生成可能无法取消，也可能仍会计费。生成的图片不会自动保存，刷新页面后会消失；如果需要，请记得下载。",
+    firstVisitTitle: "生成前提示",
+    understood: "我知道了",
     copyPrompt: "复制 Prompt",
     select: "选中",
     selected: "已选中",
     download: "下载",
+    resultsTitle: "生成结果",
     running: "正在请求图像 API...",
+    runningElapsed: "已用时",
+    cancelGeneration: "取消生成",
+    cancelNotUndoable: "已尝试取消本地请求。在执行某阶段时，如果图像生成 API 已经开始处理，这次生成可能无法取消，也可能仍会计费。生成的图片不会自动保存，刷新页面后会消失；如果需要，请记得下载。",
+    canceled: "已取消生成请求。",
     missingKey: "请先填写图像 API Key。",
     missingPrompt: "请先填写要发送的 Prompt。",
     noImage: "还没有结果。上传参考图并执行本阶段。",
@@ -81,8 +102,9 @@ const dictionaries = {
     promptPreset: "Prompt preset",
     uploadRefs: "Upload reference images",
     uploadSlot: "Upload",
-    replaceSlot: "Replace",
-    deleteSlot: "Delete",
+    uploadHelp: "You can choose multiple images at once or drag images into this slot.",
+    replaceSlot: "Add more",
+    deleteSlot: "Delete all",
     otherRefs: "Other reference images",
     otherRefsHelp: "Upload supporting references, while avoiding too many duplicate or unclear-role images.",
     previousCarryNote: "The selected previous-stage image is already used as the main reference, so this slot is disabled.",
@@ -93,11 +115,20 @@ const dictionaries = {
     detailsPlaceholder: "Example: only fix the expression; keep hairstyle structure and four-view layout unchanged.",
     prompt: "Prompt",
     runStage: "Run stage",
+    noticePrefix: "Note:",
+    runStageHelp: "When running a stage, if the image generation API has already started processing, this generation may not be cancelable and may still be billed. Generated images are not saved automatically and will disappear if the page refreshes; download them if you need them.",
+    firstVisitTitle: "Before generation",
+    understood: "Understood",
     copyPrompt: "Copy prompt",
     select: "Select",
     selected: "Selected",
     download: "Download",
+    resultsTitle: "Generated results",
     running: "Requesting the image API...",
+    runningElapsed: "Elapsed",
+    cancelGeneration: "Cancel generation",
+    cancelNotUndoable: "Tried to cancel the local request. If the API has already started processing, this generation may not be undoable and may still be billed.",
+    canceled: "Generation request canceled.",
     missingKey: "Fill in the image API key first.",
     missingPrompt: "Fill in the prompt that should be sent first.",
     noImage: "No results yet. Upload references and run this stage.",
@@ -152,11 +183,11 @@ const referenceGuidance = {
       },
       {
         title: { zh: "目标表情参考", en: "Target expression" },
-        help: { zh: "1-2 张，用于固定最终头壳表情。", en: "1-2 images for final shell expression." }
+        help: { zh: "建议1-2 张，用于固定最终头壳表情。", en: "Recommended 1-2 images for final shell expression." }
       },
       {
         title: { zh: "Kigurumi 案例图", en: "Kigurumi examples" },
-        help: { zh: "2-3 张，只参考头壳比例、眼眶和假发处理。", en: "2-3 images only for shell proportions, sockets, and wig handling." }
+        help: { zh: "建议2-3 张，只参考头壳比例、眼眶和假发处理。", en: "Recommended 2-3 images only for shell proportions, sockets, and wig handling." }
       }
     ]
   },
@@ -170,7 +201,7 @@ const referenceGuidance = {
       },
       {
         title: { zh: "商品照案例图", en: "Product-photo examples" },
-        help: { zh: "1-3 张，用于白底拍摄质量、材质和展示方式。", en: "1-3 images for white-background photo quality, material, and display." }
+        help: { zh: "建议1-3 张，用于白底拍摄质量、材质和展示方式。", en: "Recommended 1-3 images for white-background photo quality, material, and display." }
       },
       {
         title: { zh: "表情参考图（可选）", en: "Expression reference (optional)" },
@@ -298,6 +329,7 @@ function init() {
   renderStaticText();
   renderStages();
   bindHelper();
+  bindFirstVisitModal();
   $("#langToggle").addEventListener("click", toggleLanguage);
   $("#clearLocal").addEventListener("click", clearLocalData);
 }
@@ -333,13 +365,71 @@ function bindSettings() {
       saveState();
     });
   }
+  bindImageModelMenu();
   updateApiStatus();
+}
+
+function bindImageModelMenu() {
+  const input = $("#imageModel");
+  const toggle = $("#imageModelToggle");
+  const menu = $("#imageModelMenu");
+  if (!input || !toggle || !menu) return;
+
+  menu.innerHTML = "";
+  imageModelPresets.forEach((model) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "model-menu-option";
+    option.textContent = model;
+    option.addEventListener("click", () => {
+      input.value = model;
+      state.settings.imageModel = model;
+      closeImageModelMenu();
+      saveState();
+      input.focus();
+    });
+    menu.appendChild(option);
+  });
+
+  toggle.addEventListener("click", () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".model-combobox")) {
+      closeImageModelMenu();
+    }
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      menu.hidden = false;
+      toggle.setAttribute("aria-expanded", "true");
+      $(".model-menu-option", menu)?.focus();
+    } else if (event.key === "Escape") {
+      closeImageModelMenu();
+    }
+  });
+}
+
+function closeImageModelMenu() {
+  const menu = $("#imageModelMenu");
+  const toggle = $("#imageModelToggle");
+  if (!menu || !toggle) return;
+  menu.hidden = true;
+  toggle.setAttribute("aria-expanded", "false");
 }
 
 function renderStaticText() {
   document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
   $$("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
+  });
+  $$("[data-notice-text]").forEach((el) => {
+    renderNoticeText(el, el.dataset.noticeText);
   });
   $$("[data-i18n-placeholder]").forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
@@ -425,6 +515,7 @@ function renderReferenceGuidance(stage, node) {
 function createUploadSlot(titleText, helpText, stage, node, isWide, isPreviousCarrySlot) {
   const card = document.createElement("div");
   card.className = isWide ? "reference-slot upload-slot upload-slot-wide" : "reference-slot upload-slot";
+  card.dataset.role = titleText;
   if (isPreviousCarrySlot) {
     card.dataset.previousCarrySlot = "true";
   }
@@ -451,10 +542,13 @@ function createUploadSlot(titleText, helpText, stage, node, isWide, isPreviousCa
   button.textContent = t("uploadSlot");
 
   const deleteButton = document.createElement("button");
-  deleteButton.className = "delete-upload-button";
+  deleteButton.className = "delete-upload-button is-hidden";
   deleteButton.type = "button";
   deleteButton.textContent = t("deleteSlot");
-  deleteButton.hidden = true;
+
+  const uploadTip = document.createElement("span");
+  uploadTip.className = "upload-help-tip";
+  uploadTip.textContent = t("uploadHelp");
 
   const preview = document.createElement("div");
   preview.className = "slot-preview";
@@ -467,18 +561,67 @@ function createUploadSlot(titleText, helpText, stage, node, isWide, isPreviousCa
   button.addEventListener("click", () => input.click());
   input.addEventListener("change", () => {
     if (!input.files.length) return;
-    card._files = [...input.files];
-    renderSlotPreview(card);
-    updateReferenceWarning(stage, node);
+    addFilesToSlot(card, [...input.files], stage, node);
+    input.value = "";
+  });
+  card.addEventListener("dragenter", (event) => {
+    if (isUploadSlotDisabled(card)) return;
+    event.preventDefault();
+    card.classList.add("drag-over");
+  });
+  card.addEventListener("dragover", (event) => {
+    if (isUploadSlotDisabled(card)) return;
+    event.preventDefault();
+    card.classList.add("drag-over");
+  });
+  card.addEventListener("dragleave", (event) => {
+    if (!card.contains(event.relatedTarget)) {
+      card.classList.remove("drag-over");
+    }
+  });
+  card.addEventListener("drop", (event) => {
+    if (isUploadSlotDisabled(card)) return;
+    event.preventDefault();
+    card.classList.remove("drag-over");
+    addFilesToSlot(card, [...event.dataTransfer.files], stage, node);
   });
   deleteButton.addEventListener("click", () => {
     clearUploadSlot(card);
     updateReferenceWarning(stage, node);
   });
 
-  actions.append(button, deleteButton);
+  actions.append(button, deleteButton, uploadTip);
   card.append(title, help, input, actions, preview, carryNote);
   return card;
+}
+
+function bindFirstVisitModal() {
+  const modal = $("#firstVisitModal");
+  const dismiss = $("#firstVisitDismiss");
+  if (!modal || !dismiss || localStorage.getItem(FIRST_VISIT_KEY) === "true") return;
+  showFirstVisitModal();
+  dismiss.addEventListener("click", () => {
+    localStorage.setItem(FIRST_VISIT_KEY, "true");
+    modal.hidden = true;
+  });
+}
+
+function showFirstVisitModal() {
+  const modal = $("#firstVisitModal");
+  if (modal) modal.hidden = false;
+}
+
+function isUploadSlotDisabled(slot) {
+  const input = $(".slot-file-input", slot);
+  return Boolean(input?.disabled);
+}
+
+function addFilesToSlot(slot, files, stage, node) {
+  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+  if (!imageFiles.length) return;
+  slot._files = [...(slot._files || []), ...imageFiles];
+  renderSlotPreview(slot, stage, node);
+  updateReferenceWarning(stage, node);
 }
 
 function updateReferenceWarning(stage, node) {
@@ -498,7 +641,7 @@ function updateReferenceWarning(stage, node) {
   }
 }
 
-function renderSlotPreview(slot) {
+function renderSlotPreview(slot, stage, node) {
   const preview = $(".slot-preview", slot);
   const button = $(".upload-button", slot);
   const deleteButton = $(".delete-upload-button", slot);
@@ -507,7 +650,7 @@ function renderSlotPreview(slot) {
 
   preview.innerHTML = "";
   const urls = [];
-  (slot._files || []).forEach((file) => {
+  (slot._files || []).forEach((file, index) => {
     const url = URL.createObjectURL(file);
     urls.push(url);
 
@@ -522,12 +665,24 @@ function renderSlotPreview(slot) {
     caption.title = file.name;
     caption.textContent = file.name;
 
-    item.append(image, caption);
+    const removeButton = document.createElement("button");
+    removeButton.className = "remove-upload-button";
+    removeButton.type = "button";
+    removeButton.setAttribute("aria-label", `Remove ${file.name}`);
+    removeButton.textContent = "x";
+    removeButton.addEventListener("click", () => {
+      slot._files.splice(index, 1);
+      renderSlotPreview(slot, stage, node);
+      updateReferenceWarning(stage, node);
+    });
+
+    item.append(image, caption, removeButton);
     preview.appendChild(item);
   });
   preview.dataset.objectUrls = JSON.stringify(urls);
-  button.textContent = slot._files?.length ? t("replaceSlot") : t("uploadSlot");
-  deleteButton.hidden = !slot._files?.length;
+  const hasFiles = Boolean(slot._files?.length);
+  button.textContent = hasFiles ? t("replaceSlot") : t("uploadSlot");
+  deleteButton.classList.toggle("is-hidden", !hasFiles);
 }
 
 function clearUploadSlot(slot) {
@@ -542,13 +697,20 @@ function clearUploadSlot(slot) {
   preview.innerHTML = "";
   preview.dataset.objectUrls = "[]";
   button.textContent = t("uploadSlot");
-  deleteButton.hidden = true;
+  deleteButton.classList.add("is-hidden");
 }
 
 function getStageReferenceFiles(node) {
+  return getStageReferenceItems(node).map((item) => item.file);
+}
+
+function getStageReferenceItems(node) {
   return $$(".upload-slot", node)
     .filter((slot) => !$(".slot-file-input", slot).disabled)
-    .flatMap((slot) => slot._files || []);
+    .flatMap((slot) => (slot._files || []).map((file) => ({
+      file,
+      role: slot.dataset.role || t("otherRefs")
+    })));
 }
 
 function bindExclusiveCarryOptions(node) {
@@ -624,6 +786,9 @@ function localizeNode(root) {
   $$("[data-i18n]", root).forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
+  $$("[data-notice-text]", root).forEach((el) => {
+    renderNoticeText(el, el.dataset.noticeText);
+  });
   $$("[data-i18n-placeholder]", root).forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
@@ -645,6 +810,7 @@ function toggleLanguage() {
 
 function clearLocalData() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(FIRST_VISIT_KEY);
   for (const key of Object.keys(state.settings)) {
     state.settings[key] = key === "imageModel" ? "gpt-image-2" : key === "imageSize" ? "1024x1024" : key === "imageCount" ? "1" : key === "imageQuality" ? "high" : key === "textModel" ? "gpt-4.1-mini" : "";
     const el = document.getElementById(key);
@@ -657,11 +823,104 @@ function t(key) {
   return dictionaries[state.lang][key] || dictionaries.en[key] || key;
 }
 
+function renderNoticeText(el, key) {
+  el.innerHTML = "";
+  const prefix = document.createElement("span");
+  prefix.className = "notice-prefix";
+  prefix.textContent = t("noticePrefix");
+  el.append(prefix, document.createTextNode(t(key)));
+}
+
+function formatElapsed(milliseconds) {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function setResultsLoading(node, startTime, controller) {
+  const loading = $(".results-loading", node);
+  if (!loading) return;
+  loading.hidden = false;
+  loading.innerHTML = "";
+
+  const spinner = document.createElement("span");
+  spinner.className = "loading-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+
+  const text = document.createElement("span");
+  text.textContent = `${t("running")} ${t("runningElapsed")} ${formatElapsed(Date.now() - startTime)}`;
+
+  const cancelButton = document.createElement("button");
+  cancelButton.className = "cancel-generation-button";
+  cancelButton.type = "button";
+  cancelButton.textContent = t("cancelGeneration");
+  cancelButton.addEventListener("click", () => {
+    showCancelInfo(loading);
+    controller.abort();
+  });
+
+  loading.append(spinner, text, cancelButton);
+}
+
+function showCancelInfo(loading) {
+  let panel = $(".cancel-info-panel", loading);
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "cancel-info-panel";
+    loading.appendChild(panel);
+  }
+  renderNoticeText(panel, "runStageHelp");
+}
+
+function clearResultsLoading(node) {
+  const loading = $(".results-loading", node);
+  if (!loading) return;
+  loading.hidden = true;
+  loading.innerHTML = "";
+}
+
+function showResultsInfo(node, message) {
+  const loading = $(".results-loading", node);
+  if (!loading) return;
+  loading.hidden = false;
+  loading.innerHTML = "";
+
+  const panel = document.createElement("div");
+  panel.className = "cancel-info-panel";
+  renderNoticeText(panel, message);
+  loading.appendChild(panel);
+}
+
 function buildPrompt(stageNode) {
   const prompt = $(".prompt-input", stageNode).value.trim();
   const detail = $(".detail-input", stageNode).value.trim();
   const isRefinement = $(".carry-current", stageNode).checked;
   return isRefinement ? detail : prompt;
+}
+
+function buildFinalPrompt(prompt, referenceItems) {
+  if (!referenceItems.length) return prompt;
+
+  const groups = [];
+  referenceItems.forEach((item, index) => {
+    const previous = groups[groups.length - 1];
+    if (previous?.role === item.role) {
+      previous.end = index + 1;
+    } else {
+      groups.push({ role: item.role, start: index + 1, end: index + 1 });
+    }
+  });
+
+  const lines = groups.map((group) => {
+    const range = group.start === group.end ? `${group.start}` : `${group.start}-${group.end}`;
+    return `- Photos ${range} are ${group.role}.`;
+  });
+
+  const heading = state.lang === "zh"
+    ? "请严格按以下图像编号理解参考图分工："
+    : "Use this exact photo-role mapping for the uploaded images:";
+  return `${prompt}\n\n${heading}\n${lines.join("\n")}`;
 }
 
 async function runStage(stage, node) {
@@ -673,7 +932,12 @@ async function runStage(stage, node) {
   }
 
   button.disabled = true;
-  status.textContent = t("running");
+  const startTime = Date.now();
+  const controller = new AbortController();
+  let canceled = false;
+  status.textContent = "";
+  setResultsLoading(node, startTime, controller);
+  const timer = window.setInterval(() => setResultsLoading(node, startTime, controller), 1000);
   try {
     const prompt = buildPrompt(node);
     if (!prompt) {
@@ -682,33 +946,56 @@ async function runStage(stage, node) {
     }
     const isRefinement = $(".carry-current", node).checked;
     const useRefinementRefs = $(".use-refinement-refs", node).checked;
-    const files = isRefinement && !useRefinementRefs ? [] : getStageReferenceFiles(node);
+    const uploadedItems = isRefinement && !useRefinementRefs ? [] : getStageReferenceItems(node);
     const carryPrev = $(".carry-prev", node)?.checked && stage.id > 1 ? state.selected[stage.id - 1] : null;
     const carryCurrent = $(".carry-current", node).checked ? state.selected[stage.id] : null;
-    const references = [...files];
-    if (carryPrev) references.unshift(await dataUrlToFile(carryPrev.src, `step-${stage.id - 1}-selected.png`));
-    if (carryCurrent) references.unshift(await dataUrlToFile(carryCurrent.src, `step-${stage.id}-refinement.png`));
+    const referenceItems = [...uploadedItems];
+    if (carryPrev) {
+      referenceItems.unshift({
+        file: await dataUrlToFile(carryPrev.src, `step-${stage.id - 1}-selected.png`),
+        role: state.lang === "zh" ? `Step ${stage.id - 1} 选中结果` : `Selected Step ${stage.id - 1} result`
+      });
+    }
+    if (carryCurrent) {
+      referenceItems.unshift({
+        file: await dataUrlToFile(carryCurrent.src, `step-${stage.id}-refinement.png`),
+        role: state.lang === "zh" ? `Step ${stage.id} 选中微调图` : `Selected Step ${stage.id} refinement image`
+      });
+    }
 
-    const images = await requestImages(prompt, references);
+    const finalPrompt = buildFinalPrompt(prompt, referenceItems);
+    const images = await requestImages(finalPrompt, referenceItems.map((item) => item.file), controller.signal);
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     images.forEach((src, index) => {
       state.results[stage.id].unshift({
         id: `${stage.id}-${stamp}-${index}`,
         src,
-        prompt
+        prompt: finalPrompt
       });
     });
     state.selected[stage.id] = state.results[stage.id][0] || null;
     renderResults(stage.id);
     status.textContent = t("done");
   } catch (error) {
-    status.textContent = `${t("failed")}${error.message}`;
+    canceled = error.name === "AbortError";
+    if (canceled) {
+      status.textContent = t("canceled");
+      showResultsInfo(node, "runStageHelp");
+    } else {
+      status.textContent = `${t("failed")}${error.message}`;
+    }
   } finally {
+    window.clearInterval(timer);
+    if (!canceled) clearResultsLoading(node);
     button.disabled = false;
   }
 }
 
-async function requestImages(prompt, references) {
+async function requestImages(prompt, references, signal) {
+  if (isNanoBananaModel(state.settings.imageModel)) {
+    return requestNanoBananaImages(prompt, references, signal);
+  }
+
   const base = normalizeBase(state.settings.apiBase);
   const headers = { Authorization: `Bearer ${state.settings.apiKey}` };
   const n = clamp(parseInt(state.settings.imageCount, 10) || 1, 1, 4);
@@ -728,7 +1015,8 @@ async function requestImages(prompt, references) {
     const response = await fetch(`${base}/images/edits`, {
       method: "POST",
       headers,
-      body: form
+      body: form,
+      signal
     });
     return parseImageResponse(response);
   }
@@ -744,9 +1032,72 @@ async function requestImages(prompt, references) {
   const response = await fetch(`${base}/images/generations`, {
     method: "POST",
     headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal
   });
   return parseImageResponse(response);
+}
+
+function isNanoBananaModel(model) {
+  const value = (model || "").trim().toLowerCase();
+  return value === "nano-banana"
+    || value === "gemini-2.5-flash-image"
+    || value === "gemini-2.5-flash-image-preview"
+    || value === "gemini-3.1-flash-image-preview"
+    || value === "gemini-3-pro-image-preview";
+}
+
+function normalizeNanoBananaModel(model) {
+  return (model || "").trim().toLowerCase() === "nano-banana" ? "gemini-2.5-flash-image" : (model || "gemini-2.5-flash-image").trim();
+}
+
+async function requestNanoBananaImages(prompt, references, signal) {
+  const base = normalizeGeminiBase(state.settings.apiBase);
+  const model = normalizeNanoBananaModel(state.settings.imageModel);
+  const n = clamp(parseInt(state.settings.imageCount, 10) || 1, 1, 4);
+  const parts = [{ text: prompt }];
+
+  for (const file of references.slice(0, 16)) {
+    parts.push({
+      inlineData: {
+        mimeType: file.type || "image/png",
+        data: await fileToBase64(file)
+      }
+    });
+  }
+
+  const response = await fetch(`${base}/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": state.settings.apiKey
+    },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+        candidateCount: n
+      }
+    }),
+    signal
+  });
+  return parseGeminiImageResponse(response);
+}
+
+async function parseGeminiImageResponse(response) {
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error?.message || `${response.status} ${response.statusText}`);
+  }
+  const images = (payload.candidates || [])
+    .flatMap((candidate) => candidate.content?.parts || [])
+    .map((part) => part.inlineData || part.inline_data)
+    .filter((data) => data?.data)
+    .map((data) => `data:${data.mimeType || data.mime_type || "image/png"};base64,${data.data}`);
+  if (!images.length) {
+    throw new Error("The Gemini response did not include images.");
+  }
+  return images;
 }
 
 async function parseImageResponse(response) {
@@ -772,6 +1123,8 @@ function renderResults(stageId) {
   const grid = $(".result-grid", stageNode);
   grid.innerHTML = "";
   const results = state.results[stageId];
+  grid.classList.toggle("single-result-grid", results.length <= 1);
+  grid.classList.toggle("multi-result-grid", results.length > 1);
   for (const result of results) {
     const card = document.createElement("article");
     card.className = "result-card";
@@ -856,6 +1209,14 @@ function normalizeBase(base) {
   return clean.replace(/\/+$/, "");
 }
 
+function normalizeGeminiBase(base) {
+  const clean = (base || "https://generativelanguage.googleapis.com/v1beta").trim();
+  if (clean.includes("api.openai.com")) {
+    return "https://generativelanguage.googleapis.com/v1beta";
+  }
+  return clean.replace(/\/+$/, "");
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -864,4 +1225,15 @@ async function dataUrlToFile(dataUrl, name) {
   const response = await fetch(dataUrl);
   const blob = await response.blob();
   return new File([blob], name, { type: blob.type || "image/png" });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(String(reader.result).split(",")[1] || "");
+    });
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read image file.")));
+    reader.readAsDataURL(file);
+  });
 }
