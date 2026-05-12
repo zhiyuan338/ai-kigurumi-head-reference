@@ -1,6 +1,25 @@
 # Changelog / 更新日志
 
+## 0.2.1 - Bilingual Documentation / 双语文档更新
+
+- Added a bilingual Chinese-English README structure with a top language navigation bar.
+  新增 README 中英文双语文档结构，并添加顶部语言导航。
+
+- Unified the project structure, quick-start guide, and notes across both Chinese and English sections.
+  统一中英文项目结构、快速开始与注意事项内容。
+  
+
 ## 0.2.0 - Frontend Workflow Studio / 前端工作台
+
+- Online frontend page: 
+  [https://zhiyuan338.github.io/ai-kigurumi-head-reference/](https://zhiyuan338.github.io/ai-kigurumi-head-reference/)
+  [https://enderxie23.github.io/ai-kigurumi-head/](https://enderxie23.github.io/ai-kigurumi-head/)
+  在线前端页面地址：
+  [https://zhiyuan338.github.io/ai-kigurumi-head-reference/](https://zhiyuan338.github.io/ai-kigurumi-head-reference/)
+  [https://enderxie23.github.io/ai-kigurumi-head/](https://enderxie23.github.io/ai-kigurumi-head/)
+
+- Added workflow reference image: `web/assets/workflow-reference.jpeg`.
+  新增工作流参考图：`web/assets/workflow-reference.jpeg`。
 
 - Added a static GitHub Pages-ready frontend under `web/` for running the three-stage image workflow.  
   在 `web/` 下新增可直接用于 GitHub Pages 的静态前端，用于执行三阶段图像工作流。
