@@ -1010,7 +1010,7 @@ async function requestImages(prompt, references, signal) {
     if (size !== "auto") form.append("size", size);
     if (quality !== "auto") form.append("quality", quality);
     references.slice(0, 16).forEach((file) => {
-      form.append("image", file, file.name);
+      form.append("image[]", file, file.name);
     });
     const response = await fetch(`${base}/images/edits`, {
       method: "POST",
