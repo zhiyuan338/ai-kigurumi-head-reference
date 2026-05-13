@@ -1001,6 +1001,7 @@ async function requestImages(prompt, references, signal) {
   const n = clamp(parseInt(state.settings.imageCount, 10) || 1, 1, 4);
   const quality = state.settings.imageQuality;
   const size = state.settings.imageSize;
+  const imageFieldName = getOpenAIImageFieldName(base);
 
   if (references.length) {
     const form = new FormData();
@@ -1010,7 +1011,7 @@ async function requestImages(prompt, references, signal) {
     if (size !== "auto") form.append("size", size);
     if (quality !== "auto") form.append("quality", quality);
     references.slice(0, 16).forEach((file) => {
-      form.append("image", file, file.name);
+      form.append(imageFieldName, file, file.name);
     });
     const response = await fetch(`${base}/images/edits`, {
       method: "POST",
@@ -1207,6 +1208,15 @@ function buildTroubleshootingRequest(stage) {
 function normalizeBase(base) {
   const clean = (base || "https://api.openai.com/v1").trim();
   return clean.replace(/\/+$/, "");
+}
+
+function getOpenAIImageFieldName(base) {
+  try {
+    const host = new URL(base).hostname.toLowerCase();
+    return host === "api.openai.com" ? "image[]" : "image";
+  } catch {
+    return "image";
+  }
 }
 
 function normalizeGeminiBase(base) {
