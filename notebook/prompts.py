@@ -1,8 +1,7 @@
-"""Load step prompts from ../prompts/*.md.
+"""从 ../prompts/*.md 中加载各阶段的 prompt。
 
-Each step markdown is structured as alternating `## <Section Name>` headers
-followed by a fenced ```text``` block. We extract those blocks and map them to
-stable English keys that the agent can request by name.
+每个 step 的 markdown 文件交替出现 `## <小节名>` 标题和 ```text``` 围栏代码块。
+本模块抽取这些围栏内容,并按稳定的英文 key 映射,以便 Agent 按名取用。
 """
 
 from __future__ import annotations
