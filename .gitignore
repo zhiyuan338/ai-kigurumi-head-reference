@@ -5,3 +5,5 @@ outputs/
 private/
 references/private/
 *.tmp
+dataset/*
+notebook/.env
